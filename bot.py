@@ -144,7 +144,7 @@ def compare(user, beatmap_id, dc_user):
 			msg += f"""Title: {beatmap["title"]} [{beatmap["version"]} ⭐{round(float(beatmap["difficultyrating"]), 2)}]\n"""
 			if int(score["maxcombo"]) == int(beatmap["max_combo"]):
 				msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""
-			elif int(score["pp"]) > int(pp_for_fc[f"maxPP_{acc}"]):
+			elif float(score["pp"]) > float(pp_for_fc[f"maxPP_{acc}"]):
 				msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""				
 			else:
 				msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp ({round(pp_for_fc[f"maxPP_{acc}"], 2)}pp for {round(acc, 2)}% FC) [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""				

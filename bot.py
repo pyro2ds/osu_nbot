@@ -73,13 +73,13 @@ def recent(user, channel, dc_user):
 
 		msg = ""
 
-		msg += f"""```Title: {beatmap["title"]} + {mods_upper} [{beatmap["version"]}⭐{round(float(beatmap['difficultyrating']), 2)}]\n"""
-		msg += f"""Mapper: {beatmap["creator"]}\n"""
+		msg += f"""Title: {beatmap["title"]} + {mods_upper} [{beatmap["version"]}⭐{round(float(beatmap['difficultyrating']), 2)}]\n"""
+		msg += f"""Mapper: ```{beatmap["creator"]}```\n"""
 		if int(pp_s["play_pp"] > int(pp_s[f"maxPP_{acc}"])):
 			msg += f"""Score: {play['score']} Combo: {play['maxcombo']}/{beatmap["max_combo"]} {round(pp_s["play_pp"], 2)}pp)\n"""
 		else:
 			msg += f"""Score: {play['score']} Combo: {play['maxcombo']}/{beatmap["max_combo"]} {round(pp_s["play_pp"], 2)}pp ({round(pp_s[f"maxPP_{acc}"], 2)}pp for {round(acc, 2)}% FC)\n"""
-		msg += f"""Rank: {play['rank']} {round(acc, 2)}% [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}] ```"""
+		msg += f"""Rank: {play['rank']} {round(acc, 2)}% [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}] """
 
 		profile_url = 'https://a.ppy.sh/{}'.format(play['user_id'])
 		title = f"Most recent osu play for {user_info['username']}"

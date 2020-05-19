@@ -140,8 +140,9 @@ class API:
 		data = s.get(url).content.decode("utf-8")
 		if maps.count == 0:
 			maps.insert_one({str(beatmap_id): data})
-		for x in maps.find({}):
-			_id = x["_id"]
-			res = maps.find_one_and_replace({str(beatmap_id): {'$regex': '.*.*'}}, {str(beatmap_id): data})
-			if not res:
-				maps.insert_one({str(beatmap_id): data})
+		else:
+				for x in maps.find({}):
+					_id = x["_id"]
+					res = maps.find_one_and_replace({str(beatmap_id): {'$regex': '.*.*'}}, {str(beatmap_id): data})
+					if not res:
+						maps.insert_one({str(beatmap_id): data})

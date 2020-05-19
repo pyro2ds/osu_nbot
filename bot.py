@@ -389,7 +389,7 @@ def num_to_mod(number):
 		mod_list.append('SD')
 	if number & 1 << 9:
 		mod_list.append('NC')
-	if number & 1 << 6:
+	elif number & 1 << 6:
 		mod_list.append('DT')
 	if number & 1 << 7:
 		mod_list.append('RX')
@@ -399,8 +399,6 @@ def num_to_mod(number):
 		mod_list.append('FL')
 	if number & 1 << 12:
 		mod_list.append('SO')
-	if number & 1 << 14:
-		mod_list.append('PF')
 	if number & 1 << 15:
 		mod_list.append('4 KEY')
 	if number & 1 << 16:
@@ -486,6 +484,7 @@ def mod_to_num(mods: str):
 class bot(discord.Client):
 	async def on_ready(self):
 		print(self.user)
+		print(self.latency * 1000, "ms")
 
 	async def on_message(self, message):
 		if message.author == client.user:
@@ -494,15 +493,17 @@ class bot(discord.Client):
 		print(command)
 		msgChannel = message.channel
 		if command[0] == "^teme":
-			await msgChannel.send(file=discord.File('C:/Users/tomij/Downloads/brick/bot/meems/temehd_2.png'))
+			await msgChannel.send(file=discord.File(f'{cf}/meems/temehd_2.png'))
 		elif command[0] == "^bing":
-			await msgChannel.send(file=discord.File('C:/Users	/tomij/Downloads/brick/bot/meems/bing.mp4'))
+			await msgChannel.send(file=discord.File(f'{cf}/meems/bing.mp4'))
 		elif command[0] == '^pumppu':
-			await msgChannel.send(file=discord.File("C:/Users/tomij/Downloads/brick/bot/meems/dodedoaodaoe.mp4"))
+			await msgChannel.send(file=discord.File(f"{cf}/meems/dodedoaodaoe.mp4"))
 		elif command[0] == '^sipa':
-			await msgChannel.send(file=discord.File("C:/Users/tomij/Downloads/brick/bot/meems/Screenshot_20191023-000929_Instagram.png"))
+			await msgChannel.send(file=discord.File(f"{cf}/meems/Screenshot_20191023-000929_Instagram.png"))
 		elif command[0] == '^kurwamamut':
-			await msgChannel.send(file=discord.File("C:/Users/tomij/Downloads/brick/bot/meems/KURWA_MAMUT_1_1.mp3"))
+			await msgChannel.send(file=discord.File(f"{cf}/meems/KURWA_MAMUT_1_1.mp3"))
+		elif command[0] == "^grr":
+			await msgChannel.send(file=discord.File(f"{cf}/meems/moka.webm"))
 		elif command[0] == "^rs" or command[0] == "^recent":
 			msgSend = recent(command, msgChannel, message)
 			try:

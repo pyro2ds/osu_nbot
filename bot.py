@@ -75,7 +75,7 @@ def recent(user, channel, dc_user):
 
 		msg += f"""```Title: {beatmap["title"]} + {mods_upper} [{beatmap["version"]}⭐{round(float(beatmap['difficultyrating']), 2)}]\n"""
 		msg += f"""Mapper: {beatmap["creator"]}\n"""
-		if int(pp_s["play_pp"] > int(pp_s[f"maxPP_{acc}"])):
+		if float(pp_s["play_pp"] > float(pp_s[f"maxPP_{acc}"])):
 			msg += f"""Score: {play['score']} Combo: {play['maxcombo']}/{beatmap["max_combo"]} {round(pp_s["play_pp"], 2)}pp)\n"""
 		else:
 			msg += f"""Score: {play['score']} Combo: {play['maxcombo']}/{beatmap["max_combo"]} {round(pp_s["play_pp"], 2)}pp ({round(pp_s[f"maxPP_{acc}"], 2)}pp for {round(acc, 2)}% FC)\n"""
@@ -144,7 +144,7 @@ def compare(user, beatmap_id, dc_user):
 			msg += f"""Title: {beatmap["title"]} [{beatmap["version"]} ⭐{round(float(beatmap["difficultyrating"]), 2)}]\n"""
 			if int(score["maxcombo"]) == int(beatmap["max_combo"]):
 				msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""
-			elif int(score["pp"]) > int(pp_for_fc[f"maxPP_{acc}"]):
+			elif float(score["pp"]) > float(pp_for_fc[f"maxPP_{acc}"]):
 				msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""				
 			else:
 				msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp ({round(pp_for_fc[f"maxPP_{acc}"], 2)}pp for {round(acc, 2)}% FC) [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""				

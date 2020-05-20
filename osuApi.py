@@ -12,7 +12,7 @@ import time
 cf = os.getcwd()
 f = open(f"{cf}/api_keys")
 api_keys = f.read().splitlines()
-mongo_client = pymongo.MongoClient(host=api_keys[2], port=int(api_keys[3]))
+mongo_client = pymongo.MongoClient(host="127.0.0.1", port=int(api_keys[3]))
 maps = mongo_client.osu_cache["maps"]
 s = requests.Session()
 p = osu.parser()
@@ -146,3 +146,5 @@ class API:
 					res = maps.find_one_and_replace({str(beatmap_id): {'$regex': '.*.*'}}, {str(beatmap_id): data})
 					if not res:
 						maps.insert_one({str(beatmap_id): data})
+		print(beatmap_id, "done")
+		time.sleep(0.1)

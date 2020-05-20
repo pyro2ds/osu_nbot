@@ -24,7 +24,7 @@ f = open(f"{cf}/api_keys")
 api_keys = f.read().splitlines()
 api = osuApi.API(api_keys[0])
 
-mongo_client = pymongo.MongoClient(host=api_keys[2], port=int(api_keys[3]))
+mongo_client = pymongo.MongoClient(host="127.0.0.1", port=int(api_keys[3]))
 users = mongo_client.osu_db["users"]
 
 def recent(user, channel, dc_user):
@@ -560,6 +560,18 @@ class bot(discord.Client):
 				try:
 					api.force_update_database(command[1])
 					await msgChannel.send(f"updated data for map {command[1]}")
+				except:
+					e_tr = traceback.format_exc()
+					print(e_tr)
+					return
+		elif command[0] == "^update_db":
+			if str(message.author) == "Pyronki#7387":
+				try:
+					res = api.get_top(command[1], limit=100)
+					await msgChannel.send("updating..")
+					for x in res:
+						api.force_update_database(x["beatmap_id"])
+					await msgChannel.send("done")
 				except:
 					e_tr = traceback.format_exc()
 					print(e_tr)

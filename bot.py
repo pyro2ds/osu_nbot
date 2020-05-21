@@ -29,6 +29,7 @@ users = mongo_client.osu_db["users"]
 
 def recent(user, channel, dc_user):
 	try:
+		best = False
 		try:
 			if "-p" in user:
 				pos = user.index("-p")
@@ -38,6 +39,9 @@ def recent(user, channel, dc_user):
 			else:
 				playNum = 0
 				showNum = playNum + 1
+			if "-b" in user:
+				best = True
+				del user[user.index("-b")]
 		except:
 			playNum = 0
 			showNum = playNum + 1
@@ -50,7 +54,29 @@ def recent(user, channel, dc_user):
 
 
 		res = api.get_recent(user[1])
-		play = res[playNum]
+		if True:
+			pp_list = []
+			for p in res:
+				activeMods = num_to_mod(int(p["enabled_mods"]))
+
+				if "NOMOD" not in activeMods:
+					mods_upper = ''.join(activeMods)
+				else:
+					mods_upper = None
+
+				if mods_upper:
+					mod_number = mod_to_num(mods_upper)
+				else:
+					mod_number = 0
+
+				acc, accn = get_acc(p["count50"], p["count100"], p["count300"], p["countmiss"])
+
+				pp_max = api.count_pp(mod_number, [float(acc)], int(p["maxcombo"]), int(p["countmiss"]), p["beatmap_id"])
+				pp_list.append(pp_max["play_pp"])
+			play = res[pp_list.index(max(pp_list))]
+			showNum = pp_list.index(max(pp_list))
+		else:
+			play = res[playNum]
 		user_info = api.get_user(play['user_id'])[0]
 		activeMods = num_to_mod(int(play["enabled_mods"]))
 
@@ -73,16 +99,16 @@ def recent(user, channel, dc_user):
 
 		msg = ""
 
-		msg += f"""Title: {beatmap["title"]} + {mods_upper} [{beatmap["version"]}⭐{round(float(beatmap['difficultyrating']), 2)}]\n"""
-		msg += f"""Mapper: ```{beatmap["creator"]}```\n"""
+		msg += f"""```Title: {beatmap["title"]} + {mods_upper} [{beatmap["version"]}⭐{round(float(beatmap['difficultyrating']), 2)}]\n"""
+		msg += f"""Mapper: {beatmap["creator"]}\n"""
 		if int(pp_s["play_pp"] > int(pp_s[f"maxPP_{acc}"])):
 			msg += f"""Score: {play['score']} Combo: {play['maxcombo']}/{beatmap["max_combo"]} {round(pp_s["play_pp"], 2)}pp)\n"""
 		else:
 			msg += f"""Score: {play['score']} Combo: {play['maxcombo']}/{beatmap["max_combo"]} {round(pp_s["play_pp"], 2)}pp ({round(pp_s[f"maxPP_{acc}"], 2)}pp for {round(acc, 2)}% FC)\n"""
-		msg += f"""Rank: {play['rank']} {round(acc, 2)}% [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}] """
+		msg += f"""Rank: {play['rank']} {round(acc, 2)}% [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]```"""
 
 		profile_url = 'https://a.ppy.sh/{}'.format(play['user_id'])
-		title = f"Most recent osu play for {user_info['username']}"
+		title = f"Most recent Osu std play for {user_info['username']}"
 		map_image_url = f"https://b.ppy.sh/thumb/{beatmapset_id}.jpg"
 
 		em = discord.Embed(description='', colour=discord.Color(0))
@@ -100,7 +126,8 @@ def recent(user, channel, dc_user):
 			print("no user specified")
 			em = discord.Embed(description="No plays made or user doesn't exist")
 		elif e == ValueError:
-			em = discord.Embed(description="Only 1 name")
+			print(e_tr)
+			em = discord.Embed(description="name dont exist or smth")
 		else:
 			print(e_tr)
 			em = discord.Embed(description=f"XD error")

@@ -8,6 +8,7 @@ import io
 import oppadc
 import pymongo
 import time
+from datetime import datetime
 
 cf = os.getcwd()
 f = open(f"{cf}/api_keys")
@@ -148,3 +149,19 @@ class API:
 						maps.insert_one({str(beatmap_id): data})
 		print(beatmap_id, "done")
 		time.sleep(0.1)
+
+api = API(api_keys[0])
+scores = api.get_top("eliaasi", limit=100)
+
+ppl = []
+pp_time = {}
+for score in scores:
+	fixeddate = datetime.strptime(score["date"], "%Y-%m-%d %H:%M:%S")
+	date_seconds = fixeddate.timestamp()
+	pp_time.update({date_seconds: score["pp"]})
+
+for i in sorted(pp_time, reverse=True)[:5]:
+	for score in scores:
+		if pp_time[i] == score["pp"]:
+			print("top")
+	print(i, pp_time[i])

@@ -13,7 +13,7 @@ import sys
 import traceback
 import math
 import time
-
+from datetime import datetime
 
 
 def r(x):
@@ -199,13 +199,19 @@ def compare(user, beatmap_id, dc_user):
 	return em
 
 def user_top_10(command, dc_user, limit=5):
+	pp_time = {}
 	try:
+		recent = False
 		if "-p" in command:
 			pos = command.index("-p")
 			playNum=int(command[pos + 1])
 			del command[pos + 1]
 			del command[pos]
-
+		if "-r" in command:
+			pos = command.index("-r")
+			playNum = None
+			recent=True
+			del command[pos]
 		else:
 			playNum = None
 			
@@ -227,7 +233,7 @@ def user_top_10(command, dc_user, limit=5):
 		em = discord.Embed(description="no user set")
 		return(em)
 	try: 
-		if playNum:
+		if playNum and not recent:
 			scores = api.get_top(command[1], limit=100)
 			score = scores[playNum - 1]
 			scores = []
@@ -235,6 +241,21 @@ def user_top_10(command, dc_user, limit=5):
 			set_last_map(dc_user, score["beatmap_id"])	
 		else:
 			scores = api.get_top(command[1])
+		if recent:
+			scores = []
+			scores_recent = api.get_top(command[1], limit=100)
+			print(scores_recent)
+			for score in scores_recent:
+				fixeddate = datetime.strptime(score["date"], "%Y-%m-%d %H:%M:%S")
+				date_seconds = fixeddate.timestamp()
+				pp_time.update({date_seconds: score["pp"]})
+
+			for i in sorted(pp_time, reverse=True)[:5]:
+				for score in scores_recent:
+					if pp_time[i] == score["pp"]:
+						scores.append(score)
+						print("top")
+				print(i, pp_time[i])
 		msg = ""
 		em = discord.Embed(description='', colour=discord.Color(0))
 		for score in scores:

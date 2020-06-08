@@ -30,12 +30,17 @@ users = mongo_client.osu_db["users"]
 def recent(user, channel, dc_user):
 	try:
 		best = False
+		mode = "0"
 		try:
+			if user[1] == "mania":
+				mode = "3"
+				del user[1]
 			if "-p" in user:
 				pos = user.index("-p")
 				playNum = int(user[pos+1])
 				showNum = playNum
-				del user[user.index("-p"):user.index("-p") + 1]
+				del user[pos + 1]
+				del user[pos]
 			else:
 				playNum = 0
 				showNum = playNum + 1
@@ -53,8 +58,8 @@ def recent(user, channel, dc_user):
 					user.append(list(x.values())[0])
 
 
-		res = api.get_recent(user[1])
-		if True:
+		res = api.get_recent(user[1], mode=mode)
+		if best:
 			pp_list = []
 			for p in res:
 				activeMods = num_to_mod(int(p["enabled_mods"]))
@@ -95,18 +100,31 @@ def recent(user, channel, dc_user):
 			mod_number = mod_to_num(mods_upper)
 		else:
 			mod_number = 0
-		pp_s = api.count_pp(mod_number, [float(acc)], int(play["maxcombo"]), int(play["countmiss"]), beatmap_id)
 
+		if mode == "0":
+			pp_s = api.count_pp(mod_number, [float(acc)], int(play["maxcombo"]), int(play["countmiss"]), beatmap_id)
+		elif mode == "3":
+			pp_s = api.count_pp(mods=mod_number, beatmap_id=beatmap_id, scores=[int(play["score"])], mode="3")
 		msg = ""
-
-		msg += f"""```Title: {beatmap["title"]} + {mods_upper} [{beatmap["version"]}⭐{round(float(beatmap['difficultyrating']), 2)}]\n"""
-		msg += f"""Mapper: {beatmap["creator"]}\n"""
-		if int(pp_s["play_pp"] > int(pp_s[f"maxPP_{acc}"])):
-			msg += f"""Score: {play['score']} Combo: {play['maxcombo']}/{beatmap["max_combo"]} {round(pp_s["play_pp"], 2)}pp)\n"""
-		else:
-			msg += f"""Score: {play['score']} Combo: {play['maxcombo']}/{beatmap["max_combo"]} {round(pp_s["play_pp"], 2)}pp ({round(pp_s[f"maxPP_{acc}"], 2)}pp for {round(acc, 2)}% FC)\n"""
-		msg += f"""Rank: {play['rank']} {round(acc, 2)}% [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]```"""
-
+		if mode == "0":
+			msg += f"""```Title: {beatmap["title"]} + {mods_upper} [{beatmap["version"]}⭐{round(float(beatmap['difficultyrating']), 2)}]\n"""
+			msg += f"""Mapper: {beatmap["creator"]}\n"""
+			if int(pp_s["play_pp"] > int(pp_s[f"maxPP_{acc}"])):
+				msg += f"""Score: {play['score']} Combo: {play['maxcombo']}/{beatmap["max_combo"]} {round(pp_s["play_pp"], 2)}pp\n"""
+			else:
+				msg += f"""Score: {play['score']} Combo: {play['maxcombo']}/{beatmap["max_combo"]} {round(pp_s["play_pp"], 2)}pp ({round(pp_s[f"maxPP_{acc}"], 2)}pp for {round(acc, 2)}% FC)\n"""
+			msg += f"""Rank: {play['rank']} {round(acc, 2)}% [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]```"""
+		
+		elif mode == "3":
+			score=play["score"]
+			msg += f"""```Title: {beatmap["title"]} + {mods_upper} [{beatmap["version"]}⭐{round(float(beatmap['difficultyrating']), 2)}]\n"""
+			msg += f"""Mapper: {beatmap["creator"]}\n"""
+			if int(play["score"]) < 600000:
+				msg += f"""Score: {play['score']} Combo: {play['maxcombo']}/{pp_s[f"play_pp_{score}"][1]} (too low score)pp\n"""
+			else:
+				msg += f"""Score: {play['score']} Combo: {play['maxcombo']}/{pp_s[f"play_pp_{score}"][1]} {r(float(pp_s["play_pp"]))}pp\n"""
+			msg += f"""Rank: {play['rank']} {round(acc, 2)}% [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]```"""
+		
 		profile_url = 'https://a.ppy.sh/{}'.format(play['user_id'])
 		title = f"Most recent Osu std play for {user_info['username']}"
 		map_image_url = f"https://b.ppy.sh/thumb/{beatmapset_id}.jpg"
@@ -117,7 +135,7 @@ def recent(user, channel, dc_user):
 		em.set_thumbnail(url=map_image_url)
 		em.description = msg
 
-		set_last_map(dc_user, beatmap_id)
+		set_last_map(dc_user, beatmap_id, mode=mode)
 		return em
 	except:
 		e = sys.exc_info()[0]
@@ -133,7 +151,7 @@ def recent(user, channel, dc_user):
 			em = discord.Embed(description=f"XD error")
 		return em
 
-def compare(user, beatmap_id, dc_user):
+def compare(user, beatmap_id, dc_user, mode="0"):
 	try:
 		if len(user) == 1:
 			for x in users.find({}, {"_id":0}):
@@ -150,7 +168,7 @@ def compare(user, beatmap_id, dc_user):
 	msg = ""
 	try:
 
-		scores = api.get_scores(user, beatmap_id)
+		scores = api.get_scores(user, beatmap_id, mode=mode)
 		player = api.get_user(user)[0]
 
 		if len(scores) == 0:
@@ -164,20 +182,30 @@ def compare(user, beatmap_id, dc_user):
 			beatmap = get_beatmap_mods(activeMods, beatmap_id)
 			acc, accn = get_acc(score["count50"], score["count100"], score["count300"], score["countmiss"])
 			mod_number = mod_to_num(conc_mods.upper())
-			pp_for_fc = api.count_pp(mod_number, [acc], None, None, beatmap_id)
-			
+			if mode == "0":
+				pp_for_fc = api.count_pp(mod_number, [acc], None, None, beatmap_id)
 
-			msg += f"```{scores.index(score) + 1}. {conc_mods}\n"
-			msg += f"""Title: {beatmap["title"]} [{beatmap["version"]} ⭐{round(float(beatmap["difficultyrating"]), 2)}]\n"""
-			if int(score["maxcombo"]) == int(beatmap["max_combo"]):
-				msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""
-			elif float(score["pp"]) > float(pp_for_fc[f"maxPP_{acc}"]):
-				msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""				
-			else:
-				msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp ({round(pp_for_fc[f"maxPP_{acc}"], 2)}pp for {round(acc, 2)}% FC) [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""				
-			msg += f"""Score:{score["score"]}, {score["maxcombo"]}x/{beatmap["max_combo"]}x```"""
-			msg += "\n"
+
+				msg += f"```{scores.index(score) + 1}. {conc_mods}\n"
+				msg += f"""Title: {beatmap["title"]} [{beatmap["version"]} ⭐{round(float(beatmap["difficultyrating"]), 2)}]\n"""
+				if int(score["maxcombo"]) == int(beatmap["max_combo"]):
+					msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""
+				elif float(score["pp"]) > float(pp_for_fc[f"maxPP_{acc}"]):
+					msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""				
+				else:
+					msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp ({round(pp_for_fc[f"maxPP_{acc}"], 2)}pp for {round(acc, 2)}% FC) [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""
+				msg += f"""Score:{score["score"]}, {score["maxcombo"]}x/{beatmap["max_combo"]}x```"""
+				msg += "\n"
 			
+			elif mode == "3":
+				maxcombo = api.count_pp(beatmap_id=beatmap_id, mods=0, scores=[0], mode="3")
+
+				msg += f"```{scores.index(score) + 1}. {conc_mods}\n"
+				msg += f"""Title: {beatmap["title"]} [{beatmap["version"]} ⭐{round(float(beatmap["difficultyrating"]), 2)}]\n"""
+				msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""			
+				msg += f"""Score:{score["score"]}, {score["maxcombo"]}x/{maxcombo["play_pp_0"][1]}x```"""
+				msg += "\n"
+	
 			profile_url = 'https://a.ppy.sh/{}'.format(player['user_id'])
 			title = f"""Top osu plays in {beatmap["title"]} for {score['username']}"""
 			map_image_url = f"""https://b.ppy.sh/thumb/{beatmap["beatmapset_id"]}.jpg"""
@@ -197,17 +225,20 @@ def compare(user, beatmap_id, dc_user):
 		return em
 
 	return em
-
 def user_top_10(command, dc_user, limit=5):
 	pp_time = {}
+	mode = "0"
 	try:
 		recent = False
+		if command[1] == "mania":
+			mode = "3"
+			del command[1]
 		if "-p" in command:
 			pos = command.index("-p")
 			playNum=int(command[pos + 1])
 			del command[pos + 1]
 			del command[pos]
-		if "-r" in command:
+		elif "-r" in command:
 			pos = command.index("-r")
 			playNum = None
 			recent=True
@@ -233,17 +264,19 @@ def user_top_10(command, dc_user, limit=5):
 		em = discord.Embed(description="no user set")
 		return(em)
 	try: 
+		print(playNum, recent)
 		if playNum and not recent:
-			scores = api.get_top(command[1], limit=100)
+			print("nigg")
+			scores = api.get_top(command[1], limit=100, mode=mode)
 			score = scores[playNum - 1]
 			scores = []
 			scores.append(score)
-			set_last_map(dc_user, score["beatmap_id"])	
+			set_last_map(dc_user, score["beatmap_id"], mode = mode)	
 		else:
-			scores = api.get_top(command[1])
+			scores = api.get_top(command[1], mode=mode)
 		if recent:
 			scores = []
-			scores_recent = api.get_top(command[1], limit=100)
+			scores_recent = api.get_top(command[1], limit=100, mode=mode)
 			print(scores_recent)
 			for score in scores_recent:
 				fixeddate = datetime.strptime(score["date"], "%Y-%m-%d %H:%M:%S")
@@ -259,25 +292,35 @@ def user_top_10(command, dc_user, limit=5):
 		msg = ""
 		em = discord.Embed(description='', colour=discord.Color(0))
 		for score in scores:
+			print(score)
 			beatmap_id = score["beatmap_id"]
 			activeMods = num_to_mod(score["enabled_mods"])
 			conc_mods = "".join(activeMods)
 			beatmap = get_beatmap_mods(activeMods, beatmap_id)
 			acc, accn = get_acc(score["count50"], score["count100"], score["count300"], score["countmiss"])
 			mod_number = mod_to_num(conc_mods.upper())
-			pp_for_fc = api.count_pp(mod_number, [acc], None, None, beatmap_id)
+			if mode == "0":
+				pp_for_fc = api.count_pp(mod_number, [acc], None, None, beatmap_id)
 
-			msg += f"```{scores.index(score) + 1}. {conc_mods}\n"
-			msg += f"""Title: {beatmap["title"]} [{beatmap["version"]} ⭐{round(float(beatmap["difficultyrating"]), 2)}]\n"""
-			if int(score["maxcombo"]) == int(beatmap["max_combo"]):
-				msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""
-			else:
-				msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp ({round(pp_for_fc[f"maxPP_{acc}"], 2)}pp for {round(acc, 2)}% FC) [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""				
-			msg += f"""Score:{score["score"]}, {score["maxcombo"]}x/{beatmap["max_combo"]}x```"""
-			msg += "\n"
+				msg += f"```{scores.index(score) + 1}. {conc_mods}\n"
+				msg += f"""Title: {beatmap["title"]} [{beatmap["version"]} ⭐{round(float(beatmap["difficultyrating"]), 2)}]\n"""
+				if int(score["maxcombo"]) == int(beatmap["max_combo"]):
+					msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""
+				else:
+					msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp ({round(pp_for_fc[f"maxPP_{acc}"], 2)}pp for {round(acc, 2)}% FC) [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""				
+				msg += f"""Score:{score["score"]}, {score["maxcombo"]}x/{beatmap["max_combo"]}x```"""
+				msg += "\n"
 			
-		
-		title = f"""Top osu plays for {command[1]}"""
+			elif mode == "3":
+				msg += f"```{scores.index(score) + 1}. {conc_mods}\n"
+				msg += f"""Title: {beatmap["title"]} [{beatmap["version"]} ⭐{round(float(beatmap["difficultyrating"]), 2)}]\n"""
+				msg += f"""{score["rank"]} {round(acc, 2)}% {round(float(score["pp"]), 3)}pp [{accn[2]}/{accn[1]}/{accn[0]}/{accn[3]}]\n"""			
+				msg += f"""Score:{score["score"]}, {score["maxcombo"]}x/{beatmap["max_combo"]}x```"""
+				msg += "\n"
+		if recent:
+			title = f"""Most recent top osu!std plays for {command[1]}"""
+		else:
+			title = f"""Top osu!std plays for {command[1]}"""
 		profile_url = 'https://a.ppy.sh/{}'.format(score['user_id'])
 		if playNum:
 			map_image_url = f"""https://b.ppy.sh/thumb/{beatmap["beatmapset_id"]}.jpg"""
@@ -293,9 +336,16 @@ def user_top_10(command, dc_user, limit=5):
 		return em
 	return em
 
-def map_info(command, beatmap_id):
+def map_info(command, beatmap_id, mode="0"):
 	time_module = time.time()
+	
 	try:
+		if "-s" in command:
+			pos = command.index("-s")
+			cScore = int(command[pos + 1])
+			del command[pos + 1]; del command[pos]
+		else:
+			cScore = None
 		if "-a" in command:
 			pos = command.index("-a")
 			try:
@@ -310,7 +360,6 @@ def map_info(command, beatmap_id):
 			pass
 		try:	
 			if command[1]:
-				print(command, "here")
 				mods = command[1].upper()
 				mod_number = mod_to_num(mods)
 				beatmap = get_beatmap_mods(mods, beatmap_id)
@@ -322,34 +371,69 @@ def map_info(command, beatmap_id):
 			mods = None
 			mod_number = 0
 			beatmap = api.get_beatmap(beatmap_id, mods)[0]
-
+		print(beatmap)
 		accs=[95.0, 99.0, 100.0]
-		pp_for_accs = api.count_pp(mod_number, accs, None, None, beatmap_id)
-
-		if mods:
-			diff = api.get_diff(beatmap_id, mods.upper())
-		else:
-			diff = api.get_diff(beatmap_id, None)
-		if acc and acc > 0 and acc <= 100:
-			pp_for_acc = api.count_pp(mod_number, [float(acc)], None, None, beatmap_id)
-		msg = ''
-		if diff.od > 10.0:
-			od = 10.0
-		else:
-			od = diff.od
-		msg += f"""```[{beatmap["version"]} ⭐{round(float(beatmap["difficultyrating"]), 2)}]\n"""
-		if mods:
-			if "DT" in mods:
-				msg += f"""Mods:{mods} Max combo: {beatmap["max_combo"]} BPM:{math.trunc(float(beatmap["bpm"]) * 1.5)}\n"""
+		scores=[950000, 990000, 1000000]
+		if mode == "0":
+			pp_for_accs = api.count_pp(mod_number, accs, None, None, beatmap_id)
+			if mods:
+				diff = api.get_diff(beatmap_id, mods.upper())
 			else:
-				msg += f"""Mods:{mods} Max combo: {beatmap["max_combo"]} BPM:{math.trunc(float(beatmap["bpm"]))}\n"""
-		else:
-			msg += f"""Mods: -- Max combo: {beatmap["max_combo"]} BPM:{beatmap["bpm"]}\n"""
-		msg += f"""CS:{r(diff.cs)} OD:{r(od)} AR:{r(diff.ar)} HP:{r(diff.hp)}\n"""
-		if acc and acc > 0 and acc <= 100:
-			msg += f"""pp: {acc}%-{round(float(pp_for_acc[f"maxPP_{acc}"]), 2)} 99%-{round(float(pp_for_accs["maxPP_99.0"]), 2)} 100%:-{round(float(pp_for_accs["maxPP_100.0"]), 2)}```"""
-		else:
-			msg += f'pp: 95%-{round(float(pp_for_accs["maxPP_95.0"]), 2)} 99%-{round(float(pp_for_accs["maxPP_99.0"]), 2)} 100%-{round(float(pp_for_accs["maxPP_100.0"]), 2)}```'
+				diff = api.get_diff(beatmap_id, None)
+			
+			if diff.od > 10.0:
+				od = 10.0
+			else:
+				od = diff.od
+
+			if acc and acc > 0 and acc <= 100:
+				pp_for_acc = api.count_pp(mod_number, [float(acc)], None, None, beatmap_id)
+
+			msg = ''
+			msg += f"""```[{beatmap["version"]} ⭐{round(float(beatmap["difficultyrating"]), 2)}]\n"""
+			if mods:
+				if "DT" in mods:
+					msg += f"""Mods:{mods} Max combo: {beatmap["max_combo"]} BPM:{math.trunc(float(beatmap["bpm"]) * 1.5)}\n"""
+				else:
+					msg += f"""Mods:{mods} Max combo: {beatmap["max_combo"]} BPM:{math.trunc(float(beatmap["bpm"]))}\n"""
+			else:
+				msg += f"""Mods: -- Max combo: {beatmap["max_combo"]} BPM:{beatmap["bpm"]}\n"""
+			msg += f"""CS:{r(diff.cs)} OD:{r(od)} AR:{r(diff.ar)} HP:{r(diff.hp)}\n"""
+			if acc and acc > 0 and acc <= 100:
+				msg += f"""pp: {acc}%-{round(float(pp_for_acc[f"maxPP_{acc}"]), 2)} 99%-{round(float(pp_for_accs["maxPP_99.0"]), 2)} 100%:-{round(float(pp_for_accs["maxPP_100.0"]), 2)}```"""
+			else:
+				msg += f'pp: 95%-{round(float(pp_for_accs["maxPP_95.0"]), 2)} 99%-{round(float(pp_for_accs["maxPP_99.0"]), 2)} 100%-{round(float(pp_for_accs["maxPP_100.0"]), 2)}```'
+
+		elif mode == "3":
+			pp_for_scores = api.count_pp(mods=mod_number, scores=scores, beatmap_id=beatmap_id, mode=mode)
+			diff = api.get_diff(beatmap_id, mod_number, mode="3")
+
+			if int(diff["od"]) > 10.0:
+				od = 10.0
+			else:
+				od = int(diff["od"])
+
+			if cScore and cScore > 500000 and cScore <= 1000000:
+				pp_for_cScore = api.count_pp(beatmap_id=beatmap_id, scores=[cScore], mods=mod_number, mode="3")
+
+			msg = ''
+			msg += f"""```[{beatmap["version"]} ⭐{round(float(beatmap["difficultyrating"]), 2)}]\n"""
+			if mods:
+				if "DT" in mods:
+					msg += f"""Mods:{mods} Max combo: {pp_for_scores["play_pp_950000"][1]} BPM:{math.trunc(float(beatmap["bpm"]) * 1.5)}\n"""
+				else:
+					msg += f"""Mods:{mods} Max combo: {pp_for_scores["play_pp_950000"][1]} BPM:{math.trunc(float(beatmap["bpm"]))}\n"""
+			else:
+				msg += f"""Mods: -- Max combo: {pp_for_scores["play_pp_950000"][1]} BPM:{beatmap["bpm"]}\n"""
+			msg += f"""Keys:{beatmap["diff_size"]} OD:{r(od)} AR:8 HP:8\n"""
+
+
+			if cScore and cScore > 500000 and cScore <= 1000000:
+				msg += f"""pp: {cScore}:-{pp_for_cScore[f"play_pp_{cScore}"][0]}pp 990k-{pp_for_scores["play_pp_990000"][0]}pp 1mil:-{pp_for_scores["play_pp_1000000"][0]}pp```"""
+			else:
+				msg += f'pp: 950k-{pp_for_scores["play_pp_950000"][0]}pp 990k-{pp_for_scores["play_pp_990000"][0]}pp 1mil:-{pp_for_scores["play_pp_1000000"][0]}pp```'	
+
+
 
 		title = f"""Map info for {beatmap["title"]}"""
 		map_image_url = f"""https://b.ppy.sh/thumb/{beatmap["beatmapset_id"]}.jpg"""
@@ -387,17 +471,14 @@ def get_beatmap_mods(mods, beatmap_id):
 			beatmap = api.get_beatmap(beatmap_id, None); return beatmap[0]
 
 
-def set_last_map(dc_user, beatmap_id):
+def set_last_map(dc_user, beatmap_id, mode):
 	last_map = mongo_client.osu_db["last_map"]
 	if last_map.estimated_document_count == 0:
-		last_map.insert_one({str(dc_user.channel.id): beatmap_id})	
+		last_map.insert_one({str(dc_user.channel.id): (beatmap_id, mode)})	
 	else:
-		for x in last_map.find({}):
-			_id = x["_id"]
-			res = last_map.find_one_and_replace({str(dc_user.channel.id): {'$regex': '.*.*'}}, {str(dc_user.channel.id): beatmap_id})
-			print(res)
-			if res == None:
-				last_map.insert_one({str(dc_user.channel.id): beatmap_id})
+		res = last_map.find_one_and_replace({str(dc_user.channel.id): {'$regex': '.*.*'}}, {str(dc_user.channel.id): (beatmap_id, mode)})
+		if res == None:
+			last_map.insert_one({str(dc_user.channel.id): (beatmap_id, mode)})
 
 def add_user(name, discord_name):
 	users = mongo_client.osu_db["users"]
@@ -567,7 +648,7 @@ class bot(discord.Client):
 				print(key, "value", str(message.channel.id))
 				if str(message.channel.id) == str(key):
 					print("hererer")
-					msgSend = compare(command, value, message)
+					msgSend = compare(command, value[0], message, mode=value[1])
 					print(msgSend)
 					break
 			try:
@@ -582,7 +663,7 @@ class bot(discord.Client):
 				print(key, "value", str(message.channel.id))
 				if str(message.channel.id) == str(key):
 					#print("hererer")
-					msgSend = map_info(command, value)
+					msgSend = map_info(command, value[0], mode=value[1])
 					print(msgSend)
 					break
 			try:
@@ -603,6 +684,8 @@ class bot(discord.Client):
 			remove_user(command[1], message.author)
 			await msgChannel.send(f"deleted {command[1]}")
 			return
+		elif command[0] == "^ping":
+			await msgChannel.send(f"{math.trunc(self.latency * 1000)}ms")
 		elif command[0] == "^force_update":
 			if str(message.author) == "Pyronki#7387":
 				try:
